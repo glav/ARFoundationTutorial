@@ -12,10 +12,12 @@ using System.Linq;
 public class ARTapToPlaceObject : MonoBehaviour
 {
     public GameObject placementIndicator;
+    public GameObject objectToPlace;
 
     private ARSessionOrigin arOrigin;
     private ARPlaneManager arPlaneManager;
     private ARRaycastManager arRayCastMgr;
+
     private Pose placementPose;
     private bool placementPoseIsValid = false;
     private TrackableId currentTrackedItem;
@@ -34,6 +36,16 @@ public class ARTapToPlaceObject : MonoBehaviour
     {
         UpdatePlacementPose();
         UpdatePlacementPoseIndicator();
+
+        if (placementPoseIsValid && Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
+        {
+            PlaceObject();
+        }
+    }
+
+    private void PlaceObject()
+    {
+        Instantiate(objectToPlace, placementPose.position, placementPose.rotation);
     }
 
     private void UpdatePlacementPoseIndicator()
