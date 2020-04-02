@@ -489,7 +489,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   placementIndicator: {fileID: 1268090030}
-  objectToPlace: {fileID: 391900223933639155, guid: a9c55f3cfc9906c44a246eededbdc69d,
+  objectToPlace: {fileID: 1528915638184230, guid: 8e0f285c21cdcf14e8d5c06c57ba936b,
     type: 3}
 --- !u!4 &1750828020
 Transform:
