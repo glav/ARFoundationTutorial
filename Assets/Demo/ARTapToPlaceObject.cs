@@ -13,6 +13,11 @@ public class ARTapToPlaceObject : MonoBehaviour
 {
     public GameObject placementIndicator;
     public GameObject objectToPlace;
+    public Light mainLight;
+    public GameObject debugObject;
+    [SerializeField]
+    [Tooltip("The ARCameraManager which will produce frame events containing light estimation information.")]
+    ARCameraManager arCameraManager;
 
     private ARSessionOrigin arOrigin;
     private ARPlaneManager arPlaneManager;
@@ -21,7 +26,17 @@ public class ARTapToPlaceObject : MonoBehaviour
     private Pose placementPose;
     private bool placementPoseIsValid = false;
     private TrackableId currentTrackedItem;
+    private Color oldColor = Color.white;
 
+    void FrameChanged (ARCameraFrameEventArgs args)
+    {
+        if (args.lightEstimation.averageBrightness.HasValue)
+        {
+            var brightness = args.lightEstimation.averageBrightness.Value;
+            mainLight.intensity = brightness;
+        }
+
+    }
 
     // Start is called before the first frame update
     void Start()
@@ -29,6 +44,15 @@ public class ARTapToPlaceObject : MonoBehaviour
         arOrigin = FindObjectOfType<ARSessionOrigin>();
         arPlaneManager = arOrigin.GetComponent<ARPlaneManager>();
         arRayCastMgr = arOrigin.GetComponent<ARRaycastManager>();
+        arCameraManager = arOrigin.camera.GetComponent<ARCameraManager>();
+
+        if (arCameraManager != null)
+            arCameraManager.frameReceived -= FrameChanged;
+
+        if (arCameraManager != null & enabled)
+            arCameraManager.frameReceived += FrameChanged;
+
+
     }
 
     // Update is called once per frame
@@ -39,17 +63,52 @@ public class ARTapToPlaceObject : MonoBehaviour
 
         if (placementPoseIsValid && Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
         {
-            PlaceObject();
+            ChangeDebugColor(Color.green);
+            PlaceObject(placementPose.position, placementPose.rotation);
+            return;
+        }
+        else
+        {
+            if (Application.isEditor && Input.GetMouseButtonDown(0))
+            {
+                var camera = arOrigin.camera;
+                var screenCenter = camera.transform.position;
+                var cameraFwd = camera.transform.forward;
+                var position = screenCenter + new Vector3(0, 0,0.5f);
+                var cameraBearing = new Vector3(cameraFwd.x, 0, cameraFwd.z).normalized;
+                var rotation = Quaternion.LookRotation(cameraBearing);
+
+                ChangeDebugColor(Color.magenta);
+                PlaceObject(position, rotation);
+                return;
+            }
+        }
+
+        if (placementPoseIsValid)
+        {
+            ChangeDebugColor(Color.blue);
+            return;
+        }
+        ChangeDebugColor(Color.red);
+    }
+
+    void ChangeDebugColor(Color newColor)
+    {
+        if (debugObject.activeSelf)
+        {
+            debugObject.GetComponent<Renderer>().material.SetColor("_Color", newColor);
         }
     }
 
-    private void PlaceObject()
+    private void PlaceObject(Vector3 position, Quaternion rotation)
     {
-        Instantiate(objectToPlace, placementPose.position, placementPose.rotation);
+        Instantiate(objectToPlace, position, rotation);
     }
 
     private void UpdatePlacementPoseIndicator()
     {
+        if (Application.isEditor) return;
+
         // this routine is done as sometimes 'trackable' can be left behind as it detect weird surfaces 
         // and this leaves placement indicators everywhere. 
         IEnumerator ClearOldTrackables()
@@ -71,7 +130,8 @@ public class ARTapToPlaceObject : MonoBehaviour
         {
             placementIndicator.SetActive(true);
             placementIndicator.transform.SetPositionAndRotation(placementPose.position, placementPose.rotation);
-        } else
+        }
+        else
         {
             placementIndicator.SetActive(false);
         }
